@@ -30,3 +30,34 @@ Follow these steps to set up the project locally:
 ```bash
 git clone https://github.com/Mohamed-Elshesheny/Turjuman.git
 cd Turjuman
+
+Get User Translations
+
+	•	GET /user-translations
+	•	Retrieve all translations saved by the logged-in user.
+
+Get Favorite Translations
+
+	•	GET /favorites
+	•	Retrieve all translations marked as favorites by the logged-in user.
+Versioning
+
+We use semantic versioning for releases:
+	•	Current Version: v1.0.0
+	•	Upcoming Version: v1.1.0 (includes minor fixes and enhanced translation features)
+	•	Future Version: v2.0.0 (AI-powered contextual translations)
+Roadmap
+
+	1.	v1.1.0:
+	•	Add bulk translation support.
+	•	Improve the favorites management system.
+	2.	v2.0.0:
+	•	Integrate an AI-based model for contextual and accurate translations.
+	•	Add speech-to-text and text-to-speech capabilities.
+	3.	Beyond v2.0.0:
+	•	Advanced grammar and style-checking features.
+	•	Multilingual translation support (translate into multiple languages at once).
+
+License
+
+This project is licensed under the MIT License. See the LICENSE file for more details.
