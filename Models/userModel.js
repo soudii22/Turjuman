@@ -88,20 +88,15 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// userSchema.index({ _id: 1 });
 
-// Transform the JSON output to clean up the response
 
-// Encrypt the password with salt (12 rounds) before saving
 userSchema.pre("save", async function (next) {
-  // This function works only when password is modified
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
   this.passwordConfirm = undefined;
   next();
 });
 
-// Compare passwords during login
 userSchema.methods.correctPassword = async function (
   candidatePassword,
   userPassword
@@ -110,20 +105,17 @@ userSchema.methods.correctPassword = async function (
 };
 
 userSchema.methods.ChangedPasswordAfter = function (JWTTimestamp) {
-  // timestamp is a date when the token was issued
   if (this.passwordChangedAt) {
     const ChangedTimestamp = parseInt(
       this.passwordChangedAt.getTime() / 1000,
       10
     );
-    return JWTTimestamp < ChangedTimestamp; // it means that the password was changed
+    return JWTTimestamp < ChangedTimestamp;
   }
-  // false means that password NOT changedd
   return false;
 };
 userSchema.methods.createPasswordResetToken = function () {
-  const resetToken = crypto.randomBytes(32).toString("hex"); // it's a random token
-  // This is what the user will get in the email
+  const resetToken = crypto.randomBytes(32).toString("hex");
 
   this.passwordResetToken = crypto
     .createHash("sha256")
@@ -142,11 +134,10 @@ userSchema.methods.createEmailVerifyToken = function () {
     .update(verifyToken)
     .digest("hex");
 
-  this.emailVerificationExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  this.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
   return verifyToken;
 };
 
-// Create the User model
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;

@@ -10,10 +10,9 @@ class APIfeatures {
     const excludedfields = ["page", "sort", "limit", "fields"];
     excludedfields.forEach((el) => delete query0bj[el]);
 
-    // 1B) advanced filtering
     let queryStr = JSON.stringify(query0bj);
     queryStr = queryStr.replace(/\b(gte|gt|lt|lte)\b/g, (match) => `$${match}`);
-    this.mongoesquery = this.mongoesquery.find(JSON.parse(queryStr)); // mongoesquery is requesting data from data base
+    this.mongoesquery = this.mongoesquery.find(JSON.parse(queryStr));
     this.totalCountPromise = this.mongoesquery.clone().countDocuments();
 
     return this;
@@ -21,13 +20,12 @@ class APIfeatures {
 
   sort() {
     if (this.queryString.sort) {
-      // req.mongoesquery بمعني انو طلب.انو يطلب بيانات من قواعد البيانات
-      const sortBy = this.queryString.sort.split(",").join(" "); // the split will تفصل كل حاجه ما بينهم ، وي join هتجمع ما بينهم تاني
+      const sortBy = this.queryString.sort.split(",").join(" ");
       this.mongoesquery = this.mongoesquery.sort(sortBy);
     } else {
-      this.mongoesquery = this.mongoesquery.sort("-createdAt"); // default sorting
+      this.mongoesquery = this.mongoesquery.sort("-createdAt");
     }
-    return this; // we write return this cause we need to chain the methods
+    return this;
   }
 
   limitFields() {
@@ -49,12 +47,10 @@ class APIfeatures {
     pagination.currentPage = page;
     pagination.limit = limit;
 
-    // next page
     if (skip + limit < this.total) {
       pagination.nextPage = page + 1;
     }
 
-    // previous page
     if (skip > 0) {
       pagination.previousPage = page - 1;
     }

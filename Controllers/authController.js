@@ -40,7 +40,6 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 exports.signup = catchAsync(async (req, res, next) => {
-  // 1) Create the new user
   const newUser = await User.create({
     name: req.body.name,
     email: req.body.email,
@@ -132,14 +131,12 @@ exports.protect = catchAsync(async (req, res, next) => {
     ? req.headers.authorization.split(" ")[1]
     : req.cookies?.jwt;
 
-  // 2️⃣ Check if token exists
   if (!token) {
     return next(
       new AppError("You are not logged in! Please log in to get access.", 401)
     );
   }
 
-  // 3️⃣ Verify token validity
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -168,7 +165,6 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 4️⃣ Check if user still exists
   const currentUser = await User.findById(decoded.id);
   if (!currentUser) {
     return next(
@@ -182,22 +178,18 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 5️⃣ Check if user changed password after token was issued
   if (currentUser.ChangedPasswordAfter(decoded.iat)) {
     return next(
       new AppError("Password recently changed. Please log in again.", 401)
     );
   }
 
-  // 6️⃣ Grant access
   req.user = currentUser;
   req.user.jti = decoded.jti;
   next();
 });
 
 exports.restricTo = (...roles) => {
-  // Rest Parameter
-  // roles is an array of ['admin'] return is the middleware fun
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return next(
@@ -296,9 +288,6 @@ exports.forgotPassword = async (req, res, next) => {
   const resetToken = user.createPasswordResetToken();
   await user.save({ validateBeforeSave: false });
 
-  // const resetURL = `${req.protocol}://${req.get(
-  //   "host"
-  // )}/api/v1/users/resetPassword/${resetToken}`;
   console.log("NODE_ENV:", process.env.NODE_ENV);
   let resetURL;
 

@@ -6,8 +6,6 @@ const handleCastErrorDB = (err) => {
 };
 
 const handleDuplicateFields = (err) => {
-  // const value = err.keyValue.match(/(["'])(\\?.)*?\1/)[0];
-  // const message = `Duplicate field value(s): ${value}. Please try different value(s)!`;
   const message = `Duplicate field value: ${err.keyValue.name}. Please use another value.`;
 
   return new AppError(message, 400);
@@ -40,22 +38,20 @@ const sendErrorProd = (err, res) => {
       status: err.status,
       message: err.message,
     });
-  } //everything that is not marked operational
+  }
   else {
     console.error("💥 Error! 💥", err);
     res.status(err.statusCode).json({
-      //status code is always 500
-      status: err.status, //status is always "error"
+      status: err.status,
       message: err.message,
     });
   }
 };
 
 module.exports = (err, req, res, next) => {
-  // console.log(err);
   console.log(err.statusCode);
 
-  err.statusCode = err.statusCode || 500; //500 because of mongoose or something else. (unknown)
+  err.statusCode = err.statusCode || 500;
   err.status = err.status || "error";
   if (process.env.NODE_ENV === "development") sendErrorDev(err, res);
   else if (process.env.NODE_ENV === "production") {
@@ -66,6 +62,5 @@ module.exports = (err, req, res, next) => {
     if (error.name === "JsonWebTokenError") error = handleJWTError();
     if (error.name === "TokenExpiredError") error = handleTokenExpiredError();
     sendErrorProd(error, res);
-    //sendErrorProd(error, res);
   }
 };

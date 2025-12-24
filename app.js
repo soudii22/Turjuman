@@ -1,8 +1,6 @@
-// 📦 Core Modules
 const fs = require("fs");
 const path = require("path");
 
-// 🚀 Third-party Packages
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -15,7 +13,6 @@ const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean");
 const compression = require("compression");
 
-// 🛠 Custom Modules
 const userRouter = require("./Routes/userRoute");
 const translateRouter = require("./Routes/translateRoute");
 const authRoute = require("./Routes/authRoute");
@@ -25,20 +22,16 @@ const globalErrorHandler = require("./Middleware/errorMiddleware");
 const { swaggerUi, swaggerSpec } = require("./utils/swaggerConfig");
 require("./utils/ passport");
 
-// 🚀 Express App Initialization
 const app = express();
 app.use(express.static("public"));
 
-// 🗂 Serve Static Files
 app.use(
   "/api",
   express.static(path.join(__dirname, "node_modules/swagger-ui-dist"))
 );
 
-// ⚡️ Enable Compression
 app.use(compression());
 
-// 🌐 CORS Configuration
 const corsOptions = {
   origin: [
     "https://turjuman.netlify.app",
@@ -52,10 +45,8 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// 🍪 Cookie Parser
 app.use(cookieParser());
 
-// 🗝 Session Management
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "keyboard cat",
@@ -72,11 +63,9 @@ app.use(
   })
 );
 
-// 🔐 Authentication with Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
-// 🛡 Security Middlewares
 app.use(
   helmet({
     contentSecurityPolicy: false,
@@ -91,28 +80,21 @@ app.use((req, res, next) => {
 app.use(mongoSanitize());
 app.use(xss());
 
-// 📝 Logging in Development
 if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-// 📦 Body Parser
 app.use(express.json({ limit: "10kb" }));
 
-// 🎯 API Home Route
 app.get("/", (req, res) => {
   res.send("Welcome to Turjuman API [Beta]");
 });
 
-
-
-// 🛣 Mounted Routes
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/", translateRouter);
 app.use("/auth", authRoute);
 app.use("/auth/mobile", mobileAuth);
 
-// 🗺 Sitemap Route
 app.get("/sitemap.xml", (req, res) => {
   const sitemapPath = path.resolve(__dirname, "sitemap.xml");
   fs.readFile(sitemapPath, (err, data) => {
@@ -125,7 +107,6 @@ app.get("/sitemap.xml", (req, res) => {
   });
 });
 
-// 🤖 Robots.txt Route
 app.get("/robots.txt", (req, res) => {
   const robotsPath = path.resolve(__dirname, "robots.txt");
   fs.readFile(robotsPath, (err, data) => {
@@ -138,19 +119,16 @@ app.get("/robots.txt", (req, res) => {
   });
 });
 
-// 📚 Swagger Docs Route
 app.use(
   "/docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, { explorer: true })
 );
 
-// ❌ Handle Unmatched Routes
 app.use("*", (req, res, next) => {
   next(new AppError(`Can't Find this URL ${req.originalUrl}`, 400));
 });
 
-// 🛠 Global Error Handler
 app.use(globalErrorHandler);
 
 module.exports = app;

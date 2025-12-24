@@ -2,12 +2,12 @@ import http from 'k6/http';
 import { sleep, check } from 'k6';
 
 export const options = {
-  vus: 10, // عدد الـ Virtual Users
-  duration: '30s', // مدة الاختبار
+  vus: 10,
+  duration: '30s',
 };
 
 export default function () {
-  const url = 'http://localhost:8001/api/v1/translate'; // غيّر حسب سيرفرك
+  const url = 'http://localhost:8001/api/v1/translate';
 
   const payload = JSON.stringify({
     word: "computer",
@@ -29,5 +29,5 @@ export default function () {
     'status was 200': (r) => r.status === 200,
   });
 
-  sleep(1); // ممكن تشيلها لو عايز ضغط أقوى
+  sleep(1);
 }

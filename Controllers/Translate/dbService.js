@@ -31,11 +31,10 @@ const saveTranslation = async ({
     isFavorite,
     level,
     definition,
-    examples, // ✅ وأضفناها كمان هنا
+    examples,
     synonyms_src,
     synonyms_target,
   });
 };
-//test
 
 module.exports = { findExistingTranslation, saveTranslation };

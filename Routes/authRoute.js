@@ -11,7 +11,6 @@ function issueTokenAndRedirect(req, res, loginMethod) {
     { expiresIn: process.env.JWT_EXPIRES_IN || "7d" }
   );
 
-  // No cookie, add token in redirect URL instead
   res.redirect(`https://www.turjuman.online/auth/callback?token=${token}`);
 }
 
@@ -31,13 +30,12 @@ router.get(
   (req, res) => {
     issueTokenAndRedirect(req, res, "google");
   }
-); //
+);
 
 router.get("/login-failure", (req, res) => {
   res.redirect("https://turjuman.online/login");
 });
 
-// Facebook login
 router.get(
   "/facebook",
   passport.authenticate("facebook", { scope: ["email"], callbackURL: "https://api.turjuman.online/auth/facebook/callback" })

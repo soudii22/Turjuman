@@ -44,7 +44,6 @@ exports.HardTransMode = catchAsync(async (req, res, next) => {
   const { word } = translation;
   const { example, examples, definition, synonymsSrc, synonymsTarget } =
     await random(word);
-  // test
   res.status(200).json({
     status: "success",
     data: {
@@ -81,7 +80,6 @@ exports.generateFlashcards = async (req, res, next) => {
         targetLang: item.targetLang,
         translateId: item._id,
 
-        // ✅ بيانات إضافية من الترجمة الأصلية
         definition: item.definition || "No definition provided.",
         examples: item.examples?.length
           ? item.examples
@@ -123,7 +121,6 @@ exports.generateFlashcards = async (req, res, next) => {
     }
   }
 
-  // 🧠 Step: Apply filtering, sorting, pagination using APIfeatures
   const features = new APIfeatures(
     FlashCard.find({ userId }).select(
       "word translation srcLang targetLang source definition examples synonymsSrc synonymsTarget translateId"

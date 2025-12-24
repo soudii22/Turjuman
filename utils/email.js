@@ -2,7 +2,7 @@ const sgMail = require("@sendgrid/mail");
 const { generateInvoice } = require("./invoiceGenerator");
 require("dotenv").config();
 
-sgMail.setApiKey(process.env.SENDGRID_PASSWORD); // or SENDGRID_API_KEY if renamed
+sgMail.setApiKey(process.env.SENDGRID_PASSWORD);
 
 module.exports = class Email {
   constructor(email, name, url) {
@@ -81,7 +81,7 @@ module.exports = class Email {
       dynamic_template_data: {
         first_name: this.firstName,
         current_date: new Date().toLocaleDateString(),
-        invoice_id: "INV-" + Math.floor(Math.random() * 100000), // يمكنك تحسين هذا لاحقاً
+        invoice_id: "INV-" + Math.floor(Math.random() * 100000),
         amount: items.reduce((total, item) => total + item.amount, 0),
         url: this.url,
         unsubscribe: `https://turjuman.online/unsubscribe?email=${this.to}`,

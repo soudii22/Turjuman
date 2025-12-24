@@ -1,5 +1,5 @@
 const path = require("path");
-const mammoth = require("mammoth"); //Read text from Docx
+const mammoth = require("mammoth");
 const AppError = require("../../utils/AppError");
 const {
   translateParagraph,

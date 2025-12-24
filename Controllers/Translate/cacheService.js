@@ -8,9 +8,9 @@ class TranslationCache {
       cold: coldCacheKey,
     };
     this.expirations = {
-      hot: 3600, // 1 hour
-      warm: 86400, // 24 hours
-      cold: 604800, // 7 days
+      hot: 3600,
+      warm: 86400,
+      cold: 604800,
     };
   }
 

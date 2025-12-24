@@ -24,12 +24,12 @@ Return only pure JSON.
 
   const result = await model.generateContent(prompt);
   const response = result.response;
-  const rawText = await response.text(); // ✅ لازم await
+  const rawText = await response.text();
 
   const cleanText = rawText
     .trim()
     .replace(/^```json|```$/g, "")
-    .trim(); // ✅ تنظيف إن لزم
+    .trim();
 
   try {
     return JSON.parse(cleanText);

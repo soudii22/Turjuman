@@ -15,14 +15,14 @@ exports.getTopActiveUsers = catchAsync(async (req, res, next) => {
       },
     },
 
-    {
-      $lookup: {
-        from: "users", // Name of the user collection
-        localField: "_id", // userId from savedtransModel
-        foreignField: "_id", // _id from userModel
-        as: "userDetails",
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "userDetails",
+        },
       },
-    },
 
     {
       $project: {
@@ -57,7 +57,7 @@ exports.getUsageAnalytics = catchAsync(async (req, res, next) => {
   });
 
   const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0); // Start of today
+  todayStart.setHours(0, 0, 0, 0);
 
   const totalUsers = await userModel.countDocuments();
   const newUsersToday = await userModel.countDocuments({ createdAt: { $gte: todayStart } });

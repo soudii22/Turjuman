@@ -1,13 +1,11 @@
 const cloudinary = require("./Cloudinary");
 const axios = require("axios");
-require("dotenv").config(); // Load environment variables
+require("dotenv").config();
 const { createClient } = require("@deepgram/sdk");
 const gemineiTranslate = require("./TranslateModel");
 
-// Deepgram API Key 🔑 from .env
 const deepgram = createClient(process.env.VOICE_AI_KEY);
 
-// Function to transcribe audio buffer 🎙️ and translate to Arabic 🌐
 const transcribeAudioBuffer = async (
   audioBuffer,
   mimetype = "audio/wav",
@@ -20,7 +18,7 @@ const transcribeAudioBuffer = async (
         mimetype,
         language,
         smart_format: true,
-        model: "nova-2", // Optional, depending on tier
+        model: "nova-2",
       }
     );
 
@@ -31,7 +29,6 @@ const transcribeAudioBuffer = async (
 
     const transcript = result.results.channels[0].alternatives[0].transcript;
 
-    // Translate transcript to Arabic
     const translationData = await gemineiTranslate(transcript, "", "en", "ar");
 
     return {

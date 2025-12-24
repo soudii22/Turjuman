@@ -4,9 +4,6 @@ const FacebookStrategy = require("passport-facebook").Strategy;
 const User = require("../Models/userModel");
 const Email = require("../utils/email");
 
-// ============================
-// Google Strategy
-// ============================
 passport.use(
   new GoogleStrategy(
     {
@@ -46,9 +43,6 @@ passport.use(
   )
 );
 
-// ============================
-// Facebook Strategy
-// ============================
 passport.use(
   new FacebookStrategy(
     {
@@ -89,9 +83,6 @@ passport.use(
   )
 );
 
-// ============================
-// Serialize / Deserialize
-// ============================
 passport.serializeUser((user, done) => done(null, user.id));
 passport.deserializeUser(async (id, done) => {
   const user = await User.findById(id);

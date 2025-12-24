@@ -1,10 +1,8 @@
 const APIfeatures = require("../utils/ApiFeaturs");
 const catchAsync = require("express-async-handler");
 
-// Models 📦
 const savedtransModel = require("../Models/savedtransModel");
 
-// Services & Queries 🔧
 const { translateAndSave } = require("./Translate/translateService");
 const { getTranslationHistory } = require("./Translate/statsService");
 const { checkTranslationLimit } = require("./Translate/translationLimiter");
@@ -19,10 +17,8 @@ const {
   GetSingleTranslate,
 } = require("./Translate/translationQueries");
 
-// Factory functions 🏭
 const factory = require("../Controllers/handerController");
 
-// ===================== Translation Logic 📝 =====================
 
 exports.checkTranslationLimit = checkTranslationLimit;
 
@@ -48,7 +44,7 @@ exports.getUserTranslation = catchAsync(async (req, res, next) => {
     definition: trans.definition,
     synonyms_src: trans.synonyms_src,
     synonyms_target: trans.synonyms_target,
-    examples: trans.examples, // ✅ ضفناها هنا
+    examples: trans.examples,
   }));
 
   res.status(200).json({
@@ -59,7 +55,6 @@ exports.getUserTranslation = catchAsync(async (req, res, next) => {
   });
 });
 
-// ===================== Favorites ⭐ =====================
 
 exports.getFavorites = catchAsync(async (req, res, next) => {
   const userId = req.user.id;
@@ -76,7 +71,6 @@ exports.getFavorites = catchAsync(async (req, res, next) => {
   const favorites = await features.mongoesquery;
   const totalCount = await features.getTotalCount();
 
-  // Format the response with detailed favorite translations
   const favoriteTranslations = favorites.map((trans) => ({
     id: trans.id,
     original: trans.word,
@@ -99,15 +93,12 @@ exports.getFavorites = catchAsync(async (req, res, next) => {
   });
 });
 
-// ===================== File Translation 📁 =====================
 
 exports.translateFile = translateFile;
 
-// ===================== OCR Translation 📷 =====================
 
 exports.ocrTranslateImage = ocrTranslateImage;
 
-// ===================== Translation Queries & Utilities 🔍 =====================
 
 exports.getFavoritesInOrder = getFavoritesInOrder;
 exports.markAsFavoriteById = markAsFavoriteById;
@@ -116,12 +107,10 @@ exports.GetSingleTranslate = GetSingleTranslate;
 exports.searchAndFilterTranslations = searchAndFilterTranslations;
 exports.userTanslations = userTanslations;
 
-// ===================== Factory Handlers 🏗 =====================
 
 exports.deleteTranslationById = factory.deleteOne(savedtransModel);
 exports.getalltranslations = factory.getAll(savedtransModel);
 
-// ===================== Other Services 🚀 =====================
 
 exports.translateAndSave = translateAndSave;
 exports.getTranslationHistory = getTranslationHistory;

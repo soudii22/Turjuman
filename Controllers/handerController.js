@@ -69,9 +69,8 @@ exports.getAll = (Model) =>
 
     const docs = await features.mongoesquery;
 
-    // Check if the docs array is empty
     if (docs.length === 0) {
-      return next(new AppError("No Documents found", 404)); // Use 404 for "not found" status
+      return next(new AppError("No Documents found", 404));
     }
 
     res.status(200).json({
