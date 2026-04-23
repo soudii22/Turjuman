@@ -1,0 +1,61 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const cloudinary = require("cloudinary").v2;
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+cloudinary.config({
+  secure: true,
+  url: process.env.CLOUDINARY_URL,
+});
+
+function splitText(text, chunkSize = 400, overlap = 20) {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+  let chunks = [];
+  let currentChunk = "";
+
+  for (let i = 0; i < sentences.length; i++) {
+    if ((currentChunk + sentences[i]).length <= chunkSize) {
+      currentChunk += sentences[i] + " ";
+    } else {
+      chunks.push(currentChunk.trim());
+      i -= overlap > 0 ? overlap : 0;
+      currentChunk = "";
+    }
+  }
+  if (currentChunk) chunks.push(currentChunk.trim());
+  return chunks;
+}
+
+async function translateParagraph(
+  paragraph,
+  srcLang = "English",
+  targetLang = "Arabic"
+) {
+  const prompt = `
+You are an expert translator.
+
+Translate the following paragraph from ${srcLang} to ${targetLang}.
+
+Strict Instructions:
+- The translation must be in formal, natural ${targetLang}, suitable for publication.
+- Do NOT include transliteration or Romanized text.
+- Do NOT include pronunciation or phonetic symbols.
+- Do NOT explain anything.
+- Return ONLY the translated paragraph, nothing else.
+
+Translate:
+${paragraph}
+  `;
+
+  const result = await model.generateContent(prompt);
+  const response = result.response;
+  const text = response.text();
+  return text.trim();
+}
+
+module.exports = {
+  translateParagraph,
+  splitText,
+  cloudinary,
+};

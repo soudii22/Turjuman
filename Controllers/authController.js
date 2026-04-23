@@ -1,12 +1,41 @@
+const redis = require("../utils/redisClient");
 const User = require("./../Models/userModel");
 const catchAsync = require("express-async-handler");
-const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const AppError = require("../utils/AppError");
+const Email = require("../utils/email");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 
 const signToken = (id) => {
+  const jti = crypto.randomUUID();
   return jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || "1h",
+    expiresIn: process.env.JWT_EXPIRES_IN || "6h",
+    jwtid: jti,
+  });
+};
+
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+  const cookieExpiresInDays = process.env.JWT_COOKIE_EXPIRES_IN || 7;
+
+  const cookieOptions = {
+    expires: new Date(Date.now() + cookieExpiresInDays * 24 * 60 * 60 * 1000),
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    domain: ".turjuman.online",
+  };
+
+  res.cookie("jwt", token, cookieOptions);
+
+  user.password = undefined;
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: {
+      user,
+    },
   });
 };
 
@@ -16,16 +45,26 @@ exports.signup = catchAsync(async (req, res, next) => {
     email: req.body.email,
     password: req.body.password,
     passwordConfirm: req.body.passwordConfirm,
+    isPremium: req.body.isPremium,
+    role: req.body.role,
+    isEmailVerified: req.body.loginMethod && ["google", "facebook"].includes(req.body.loginMethod) ? true : false,
+    loginMethod: req.body.loginMethod || "local",
   });
 
-  const token = signToken(newUser._id);
+  if (!newUser.isEmailVerified) {
+    const verifyToken = newUser.createEmailVerifyToken();
+    await newUser.save({ validateBeforeSave: false });
 
-  res.status(201).json({
+    const verificationURL = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v1/users/verify-email/${verifyToken}`;
+    const email = new Email(newUser.email, newUser.name, verificationURL);
+    await email.sendVerificationEmail();
+  }
+
+  return res.status(200).json({
     status: "success",
-    token,
-    data: {
-      user: newUser,
-    },
+    message: "Verification email sent. Please check your inbox.",
   });
 });
 
@@ -33,7 +72,7 @@ exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return next(new AppError("Please Provide an email and a passowrd!", 400));
+    return next(new AppError("Please Provide an email and a password!", 400));
   }
 
   const user = await User.findOne({ email }).select("+password");
@@ -42,22 +81,55 @@ exports.login = catchAsync(async (req, res, next) => {
     return next(new AppError("Invalid email or password", 401));
   }
 
-  const token = signToken(user._id);
-  res.status(200).json({
-    status: "success",
-    token,
-  });
+  if (!user.isEmailVerified && user.loginMethod === "local") {
+    return next(
+      new AppError("Please verify your email before logging in.", 401)
+    );
+  }
+
+
+  if (user) {
+    user.isActive = true;
+    await user.save({ validateModifiedOnly: true });
+  }
+  createSendToken(user, 200, res);
 });
 
-exports.protect = catchAsync(async (req, res, next) => {
-  // 1) Get the token from the Authorization header
-  let token;
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    token = req.headers.authorization.split(" ")[1];
+exports.logout = async (req, res) => {
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+    path: "/",
+    domain: ".turjuman.online",
+  });
+
+  const token =
+    req.headers.authorization?.startsWith("Bearer")
+      ? req.headers.authorization.split(" ")[1]
+      : req.cookies.jwt;
+  if (token) {
+    if (req.user?.jti) {
+      try {
+        await redis.set(req.user.jti, "revoked", "EX", 60 * 60 * 6);
+      } catch (err) {
+        console.error("❌ Redis revoke failed:", err);
+      }
+    } else {
+      console.warn("JWT decode failed or jti is missing");
+    }
   }
+
+  res.status(200).json({
+    status: "success",
+    message: "Logged out successfully and cookie cleared!",
+  });
+};
+
+exports.protect = catchAsync(async (req, res, next) => {
+  const token = req.headers.authorization?.startsWith("Bearer")
+    ? req.headers.authorization.split(" ")[1]
+    : req.cookies?.jwt;
 
   if (!token) {
     return next(
@@ -65,10 +137,34 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 2) Verify the token
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    console.error("JWT verify error:", err);
+    return next(
+      new AppError("Invalid or expired token! Please log in again.", 401)
+    );
+  }
 
-  // 3) Check if the user still exists
+  if (!decoded.jti) {
+    console.warn("No jti found in decoded token");
+  }
+
+  let isRevoked = null;
+  try {
+    isRevoked = decoded.jti ? await redis.get(decoded.jti) : null;
+  } catch (err) {
+    console.error("❌ Redis check failed:", err);
+    isRevoked = null;
+  }
+
+  if (isRevoked) {
+    return next(
+      new AppError("This token has been revoked. Please log in again.", 401)
+    );
+  }
+
   const currentUser = await User.findById(decoded.id);
   if (!currentUser) {
     return next(
@@ -76,8 +172,217 @@ exports.protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // 4) Attach the user to the request object
-  req.user = currentUser;
+  if (!currentUser.isEmailVerified) {
+    return next(
+      new AppError("Please verify your email before accessing this route.", 403)
+    );
+  }
 
+  if (currentUser.ChangedPasswordAfter(decoded.iat)) {
+    return next(
+      new AppError("Password recently changed. Please log in again.", 401)
+    );
+  }
+
+  req.user = currentUser;
+  req.user.jti = decoded.jti;
   next();
+});
+
+exports.restricTo = (...roles) => {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return next(
+        new AppError("You do not have permission to perform this!", 403)
+      );
+    }
+    next();
+  };
+};
+
+exports.updateUserPassword = catchAsync(async (req, res, next) => {
+  const logedUser = await User.findById(req.params.id).select("+password");
+
+  if (!logedUser) {
+    return next(
+      new AppError(`No user found with this ID ${req.params.id}`, 404)
+    );
+  }
+
+  const { password, confirmpassword, CurrentPassword } = req.body;
+
+  const isMatch = await bcrypt.compare(CurrentPassword, logedUser.password);
+  if (!isMatch) {
+    return next(new AppError("Wrong Current Password. Please try again.", 401));
+  }
+
+  if (password !== confirmpassword) {
+    return next(new AppError("Passwords do not match. Please try again.", 400));
+  }
+
+  const hashedPassword = await bcrypt.hash(password, 12);
+
+  const user = await User.findByIdAndUpdate(
+    req.params.id,
+    { password: hashedPassword },
+    { new: true, validateModifiedOnly: true }
+  );
+
+  if (!user) {
+    return next(
+      new AppError(`No user found with this ID ${req.params.id}`, 404)
+    );
+  }
+
+  res.status(200).json({
+    status: "success",
+    message: "Password updated successfully",
+    data: user,
+  });
+});
+
+exports.protectUserTranslate = catchAsync(async (req, res, next) => {
+  const token = req.headers.authorization?.startsWith("Bearer")
+    ? req.headers.authorization.split(" ")[1]
+    : req.cookies?.jwt;
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  const currentUser = await User.findById(decoded.id);
+
+  if (!currentUser) {
+    req.user = null;
+    return next();
+  }
+
+  if (!currentUser.isEmailVerified) {
+    return next(
+      new AppError("Please verify your email before accessing this route.", 403)
+    );
+  }
+
+  if (currentUser.ChangedPasswordAfter(decoded.iat)) {
+    return next(
+      new AppError(
+        "The user recently changed the password! please log in again",
+        401
+      )
+    );
+  }
+
+  req.user = currentUser;
+  next();
+});
+
+exports.forgotPassword = async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    return next(new AppError("There is no user with this email address", 404));
+  }
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  console.log("NODE_ENV:", process.env.NODE_ENV);
+  let resetURL;
+
+  if (process.env.NODE_ENV === "production") {
+    resetURL = `https://www.turjuman.online/resetPassword/${resetToken}`;
+  } else {
+    resetURL = `${req.protocol}://${req.get(
+      "host"
+    )}/api/v1/users/resetPassword/${resetToken}`;
+  }
+
+  try {
+    const email = new Email(user, resetURL);
+    await email.sendPasswordReset();
+
+    res.status(200).json({
+      status: "success",
+      message: "Token sent to email!",
+    });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpired = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    return next(
+      new AppError(
+        "There was an error sending the email. Try again later!",
+        500
+      )
+    );
+  }
+};
+
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  if (!req.params.token) {
+    return next(new AppError("Token is missing!", 400));
+  }
+
+  if (!req.body.password || !req.body.passwordConfirm) {
+    return next(
+      new AppError("Please provide both password and passwordConfirm", 400)
+    );
+  }
+
+  if (req.body.password !== req.body.passwordConfirm) {
+    return next(new AppError("Passwords do not match.", 400));
+  }
+
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+
+  const user = await User.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpired: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is invalid or expired!", 400));
+  }
+
+  user.password = req.body.password;
+  user.passwordConfirm = req.body.passwordConfirm;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpired = undefined;
+  await user.save();
+
+  console.log(`Resetting password for user: ${user.email}`);
+
+  createSendToken(user, 200, res);
+});
+
+exports.verifyEmail = catchAsync(async (req, res, next) => {
+  const token = req.params.token;
+
+  if (!token) {
+    return next(new AppError("Token is missing.", 400));
+  }
+
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await User.findOne({
+    emailVerificationToken: hashedToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError("Token is invalid or has expired.", 400));
+  }
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+  await user.save({ validateBeforeSave: false });
+
+  return res.redirect("https://www.turjuman.online/emailVerified");
 });

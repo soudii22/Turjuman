@@ -1,18 +1,22 @@
 const mongoose = require("mongoose");
+const { type } = require("os");
 
 const savedTransSchema = new mongoose.Schema(
   {
-    text: {
+    word: {
       type: String,
     },
     translation: {
       type: String,
       required: true,
     },
-    fromLang: {
+    paragraph: {
       type: String,
     },
-    toLang: {
+    srcLang: {
+      type: String,
+    },
+    targetLang: {
       type: String,
     },
     createdAt: {
@@ -21,7 +25,7 @@ const savedTransSchema = new mongoose.Schema(
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // Reference to the User model
+      ref: "User",
       required: true,
       select: false,
     },
@@ -29,9 +33,23 @@ const savedTransSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    definition: String,
+    synonyms_src: [String],
+    synonyms_target: [String],
+    level: {
+      type: String,
+      default: "Medium",
+    },
+    examples: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );
+savedTransSchema.index({ word: "text" });
+savedTransSchema.index({ srcLang: 1, targetLang: 1 });
+savedTransSchema.index({ userId: 1 });
 
 const savedtransModel = mongoose.model("savedTrans", savedTransSchema);
 

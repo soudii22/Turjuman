@@ -1,32 +1,42 @@
-# **Turjuman - Translation Application**
+# **Turjuman - AI-Powered Translation Platform**
 
-Turjuman is a dynamic and user-friendly translation application that allows users to translate text between different languages, save translations, and optionally mark them as favorites. The application provides a personalized experience, enabling users to manage their translations securely.
-
----
-
-## **Features**
-- **Dynamic Translation**: Translate single words or entire sentences between multiple languages.
-- **Favorites Management**: Mark translations as favorites for quick access.
-- **User-Specific Data**: Securely save translations for individual users.
-- **Language Pair Support**: Specify source and target languages for precise translations.
-- **Search and Filters**: Retrieve translations based on keywords, languages, or favorites.
-- **Auto Language Detection**: Automatically detect the source language if not specified.
-- **Export Options**: (Planned) Allow users to download their translations in CSV or JSON format.
+**Turjuman** is a dynamic, AI-powered translation platform that offers seamless and intelligent tools for text and voice translation, saving, and management. Designed for both free-tier and premium users, Turjuman leverages cutting-edge AI services to deliver fast, accurate, and context-aware translations.
 
 ---
 
-## **Tech Stack**
-- **Backend**: Node.js with Express.js
-- **Database**: MongoDB (Mongoose ODM)
-- **Translation API**: [`translate-google`](https://www.npmjs.com/package/translate-google) npm package
-- **Authentication**: JWT-based authentication for secure user access.
+## **Key Features**
+
+### **Core Capabilities**
+
+- **Real-Time AI Translation**: Instantly translate words, sentences, or full paragraphs across multiple languages using state-of-the-art AI translation models.
+- **Secure Translation Management**: Save translations under your account with complete access to metadata and context.
+- **Smart Favorites & History**: Easily tag and retrieve important translations with a fully searchable history.
+- **Voice Translation (Speech-to-Text)**: Transcribe spoken language into text using **Deepgram** AI, enabling voice-based translation workflows.
+- **Usage Limits**:
+  - Free-tier: Up to **10 translations per day**.
+  - Premium-tier: Up to **100 translations per day** with priority AI processing.
+
+### **Planned Enhancements**
+
+- **Bulk Translation API**: Efficiently handle large volumes of text in one go.
+- **Downloadable Reports**: Export translations in CSV, JSON, or PDF formats for offline use.
+- **Offline Translation Access**: Use cached translations without an internet connection.
+- **Voice Output (Text-to-Speech)**: Listen to translated text with natural-sounding AI voices.
+- **Advanced Security Layer**: Includes HTTP Parameter Pollution (HPP) protection and data sanitization.
 
 ---
 
-## **Setup Instructions**
-Follow these steps to set up the project locally:
+## **Technology Stack**
 
-### **1. Clone the Repository**
-```bash
-git clone https://github.com/Mohamed-Elshesheny/Turjuman.git
-cd Turjuman
+- **Backend**: Node.js (Express.js)
+- **Database**: MongoDB with Mongoose ODM
+- **Authentication**: JWT-secured user authentication
+- **AI Services**:
+  - **Deepgram**: Speech-to-text AI
+  - **Google Gemini**: Contextual language AI for enhanced translation
+- **Caching**: Redis for accelerated data retrieval
+- **Hosting**: Backend on **Vercel**, Frontend on **Netlify**
+
+---
+
+Built with ❤️ by the Turjuman Team | © 2025 All rights reserved.

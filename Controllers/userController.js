@@ -1,55 +1,140 @@
+
+const cloudinary = require('../utils/Cloudinary')
+const streamifier = require("streamifier");
 const User = require("../Models/userModel");
 const catchAsync = require("express-async-handler");
 const AppError = require("./../utils/AppError");
+const factory = require("../Controllers/handerController");
+const multer = require("multer");
+const sharp = require("sharp");
 
-exports.getAllUsers = catchAsync(async (req, res, next) => {
-  const users = await User.find();
+const multerStorage = multer.memoryStorage();
 
-  // Check if the users array is empty
-  if (users.length === 0) {
-    return next(new AppError("No users found", 404)); // Use 404 for "not found" status
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("Not an Image! Please upload Only Images", 400), false);
   }
+};
 
-  res.status(200).json({
-    status: "success",
-    data: users,
-  });
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
 });
 
-exports.getUser = catchAsync(async (req, res, next) => {
-  const user = await User.findById(req.params.id);
-  if (!user) {
+exports.uploadUserPhoto = upload.single("photo");
+
+
+exports.resizeUserPhoto = async (req, res, next) => {
+  if (!req.file) return next();
+
+  const buffer = await sharp(req.file.buffer)
+    .resize(500, 500)
+    .toFormat("jpeg")
+    .jpeg({ quality: 90 })
+    .toBuffer();
+
+  const uploadFromBuffer = () =>
+    new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "users",
+          public_id: `user-${req.user.id}-${Date.now()}`,
+        },
+        (error, result) => {
+          if (result) {
+            resolve(result);
+          } else {
+            reject(error);
+          }
+        }
+      );
+      streamifier.createReadStream(buffer).pipe(stream);
+    });
+
+  const result = await uploadFromBuffer();
+
+  req.file.filename = result.secure_url;
+
+  next();
+};
+
+
+const filterObj = (obj, ...allowedfileds) => {
+  const newObj = {};
+  Object.keys(obj).forEach((el) => {
+    if (allowedfileds.includes(el)) newObj[el] = obj[el];
+  });
+  return newObj;
+};
+
+
+exports.getMe = (req, res, next) => {
+  req.params.id = req.user.id;
+  next();
+};
+
+
+exports.updateMe = catchAsync(async (req, res, next) => {
+  if (req.body.password || req.body.passwordConfirm) {
     return next(
-      new AppError(`There is not a USER with this id ${req.params.id}`, 402)
+      new AppError(
+        "This route is not for update password ,please use /updateMyPassword",
+        400
+      )
     );
   }
-  res.status(200).json({
-    status: "success",
-    data: user,
-  });
-});
 
-exports.updateUser = catchAsync(async (req, res, next) => {
-  const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+  const filteredBody = filterObj(req.body, "name", "email");
+  if (req.file) filteredBody.photo = req.file.filename;
+
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, filteredBody, {
     new: true,
     runValidators: true,
   });
 
-  if (!user) {
-    return next(new AppError(`No user found with ID ${req.params.id}`, 404));
-  }
-
   res.status(200).json({
     status: "success",
-    data: user,
+    data: {
+      user: updatedUser,
+    },
   });
 });
 
-exports.deleteMe = catchAsync(async (req, res, next) => {
-  await User.findByIdAndDelete(req.user.id, { active: false });
 
+exports.deleteMe = catchAsync(async (req, res, next) => {
+  await User.findByIdAndUpdate(req.user.id, { active: false });
   res.status(204).json({
     status: "success",
     data: null,
   });
 });
+
+
+exports.updateUser = catchAsync(async (req, res, next) => {
+  const doc = await User.findByIdAndUpdate(
+    req.params.id,
+    {
+      name: req.body.name,
+      email: req.body.email,
+    },
+    {
+      new: true,
+      validateModifiedOnly: true,
+    }
+  );
+  if (!doc) {
+    return next(
+      new AppError(`No Document found with this ID ${req.params.id}`, 404)
+    );
+  }
+  res.status(200).json({
+    status: "success",
+    data: doc,
+  });
+});
+
+exports.getAllUsers = factory.getAll(User);
+exports.getUser = factory.getOne(User);
+exports.deleteUser = factory.deleteOne(User);
